@@ -5,35 +5,37 @@ export API_CLIENT=$1
 export PATH_TO_KEY=$2
 
 # HMCTL setup
-wget -O /usr/bin/hmctl https://github.com/PureStorage-OpenConnect/hmctl/releases/download/v1.0.28/hmctl-linux-amd64
-chmod +x /usr/bin/hmctl
-mkdir -p .pure/
-echo "{
-  "default_profile": "admin",
+sudo wget -O /usr/bin/hmctl https://github.com/PureStorage-OpenConnect/hmctl/releases/download/v1.0.28/hmctl-linux-amd64
+sudo chmod +x /usr/bin/hmctl
+mkdir -p ~/.pure/
+echo '{
+  "default_profile": "pm-lab-admin",
   "profiles": {
-    "user1": {
+    "pm-lab-admin": {
       "env": "pure1",
       "endpoint": "https://api.pure1.purestorage.com/fusion",
       "auth": {
-        "issuer_id": "$apiClient",
-        "private_pem_file": "$pathToKey"
+        "issuer_id": "${apiClient}",
+        "private_pem_file": "${pathToKey}"
       }
     }
   }
-}" > .pure/fusion.json
+}' > ~/.pure/fusion.json
 
 # HMCTL test
 hmctl region list
 
 # Python setup
-python3 -m pip install --user install purefusion
+sudo apt update
+sudo apt install python3-pip
+pip3 install purefusion
 
 # Python test
-chmod +x python/smoke_test.py
+sudo chmod +x python/smoke_test.py
 python3 python/smoke_test.py
 
 # Ansible setup
-python3 -m pip install --user ansible
+sudo apt install ansible
 ansible-galaxy collection install purestorage.fusion
 
 # Ansible test

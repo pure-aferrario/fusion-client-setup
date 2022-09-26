@@ -1,7 +1,8 @@
+---
 - hosts: localhost
   tasks:
   - name: Collect information for Pure Storage fleet in Pure1
     purestorage.fusion.fusion_info:
       gather_subset: all
-      app_id: {{ ansible_env.API_CLIENT}}
-      key_file: {{ ansible_env.PATH_TO_KEY}}
+      app_id: "{{ ansible_env.API_CLIENT}}"
+      key_file: "{{ ansible_env.PATH_TO_KEY}}"
