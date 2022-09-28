@@ -1,6 +1,8 @@
 # Args
 apiClient=$1
 pathToKey=$2
+echo apiClient
+echo pathToKey
 export API_CLIENT=$1
 export PATH_TO_KEY=$2
 
@@ -15,8 +17,8 @@ echo '{
       "env": "pure1",
       "endpoint": "https://api.pure1.purestorage.com/fusion",
       "auth": {
-        "issuer_id": "${apiClient}",
-        "private_pem_file": "${pathToKey}"
+        "issuer_id": "'${apiClient}'",
+        "private_pem_file": "'${pathToKey}'"
       }
     }
   }
