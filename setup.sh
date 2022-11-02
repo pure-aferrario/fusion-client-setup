@@ -7,7 +7,7 @@ export API_CLIENT=$1
 export PATH_TO_KEY=$2
 
 # HMCTL setup
-sudo wget -O /usr/bin/hmctl https://github.com/PureStorage-OpenConnect/hmctl/releases/download/v1.0.28/hmctl-linux-amd64
+sudo wget -O /usr/bin/hmctl https://github.com/PureStorage-OpenConnect/hmctl/releases/latest/download/hmctl-linux-amd64
 sudo chmod +x /usr/bin/hmctl
 mkdir -p ~/.pure/
 echo '{
