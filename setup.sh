@@ -33,8 +33,8 @@ sudo apt install python3-pip
 pip3 install purefusion
 
 # Python test
-sudo chmod +x python/smoke_test.py
-python3 python/smoke_test.py
+sudo chmod +x python/00_smoke_test.py
+python3 python/00_smoke_test.py
 
 # Ansible setup
 sudo apt install ansible
