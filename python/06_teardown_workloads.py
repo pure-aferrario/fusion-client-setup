@@ -99,7 +99,7 @@ except ApiException as e:
 for host_access_policy in hap_list.items:
     # Delete Host Access Policy
     try:
-        api_response = t.delete_host_access_policy(host_access_policy.name)
+        api_response = hap.delete_host_access_policy(host_access_policy.name)
         pprint(api_response)
         wait_operation_succeeded(api_response.id, client)
     except ApiException as e:
