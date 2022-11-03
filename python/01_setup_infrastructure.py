@@ -142,4 +142,20 @@ for array in arrays:
         wait_operation_succeeded(api_response.id, client)
     except ApiException as e:
         print("Exception when calling StorageEndpointsApi->create_storage_endpoint: %s\n" % e)
+    try:
+        ni_list = ni.list_network_interfaces(region1.name, az1.name, array["name"])
+        pprint(ni_list)
+        wait_operation_succeeded(api_response.id, client)
+    except ApiException as e:
+        print("Exception when calling NetworkInterfacesApi->list_network_interfaces: %s\n" % e)
+    # Add Arrays into Availability Zone
+    for network_interface in ni_list.items:
+        print("network_interface", network_interface.name)
+        patch_network_interface = fusion.NetworkInterfacePatch(network_interface_group=fusion.NullableString(network_interface_group["name"]))
+        try:
+            api_response = ni.update_network_interface(patch_network_interface, region1.name, az1.name, array["name"], network_interface.name)
+            pprint(api_response)
+            wait_operation_succeeded(api_response.id, client)
+        except ApiException as e:
+            print("Exception when calling StorageEndpointsApi->create_storage_endpoint: %s\n" % e)
 print("Done!")
