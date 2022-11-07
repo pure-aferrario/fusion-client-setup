@@ -1,86 +1,57 @@
 import fusion
 import os
+import pathlib
+import yaml
 from fusion.rest import ApiException
 from pprint import pprint
 from utils import wait_operation_succeeded
 
-config = fusion.Configuration()
-config.issuer_id = os.getenv("API_CLIENT")
-config.private_key_file = os.getenv("PRIV_KEY_FILE")
+def setup_storage_policies():
+    print("Setting up storage policies")
+    # Setup Config
+    config = fusion.Configuration()
+    config.issuer_id = os.getenv("API_CLIENT")
+    config.private_key_file = os.getenv("PRIV_KEY_FILE")
 
-client = fusion.ApiClient(config)
+    client = fusion.ApiClient(config)
 
-ss = fusion.StorageServicesApi(api_client=client)
-sc = fusion.StorageClassesApi(api_client=client)
+    ss = fusion.StorageServicesApi(api_client=client)
+    sc = fusion.StorageClassesApi(api_client=client)
 
-flash_performance = fusion.StorageServicePost(
-    name="flash_performance",
-    display_name="flash_performance",
-    hardware_types=["flash-array-x"]
-)
+    # Load configuration
+    with open(pathlib.Path(__file__).parent / "config/policy.yaml") as file:
+        storage_services = yaml.safe_load(file)["storage_services"]
 
-flash_capacity = fusion.StorageServicePost(
-    name="flash_capacity",
-    display_name="flash_capacity",
-    hardware_types=["flash-array-c"]
-)
+    # Create storage services
+    for storage_service in storage_services:
+        print("Creating storage service", storage_service["name"])
+        current_storage_service = fusion.StorageServicePost(
+            name=storage_service["name"],
+            display_name=storage_service["display_name"],
+            hardware_types=storage_service["hardware_types"]
+        )
+        try:        
+            api_response = ss.create_storage_service(current_storage_service)
+            # pprint(api_response)
+            wait_operation_succeeded(api_response.id, client)
+        except ApiException as e:
+            print("Exception when calling StorageServicesApi->create_storage_service: %s\n" % e)
+        for storage_class in storage_service["storage_classes"]:
+            print("Creating storage class", storage_class["name"], "in storage service", storage_service["name"])
+            current_storage_class = fusion.StorageClassPost(
+                name=storage_class["name"],
+                display_name=storage_class["display_name"],
+                iops_limit=storage_class["iops_limit"],
+                bandwidth_limit=storage_class["bandwidth_limit"],
+                size_limit=storage_class["size_limit"]
+            )
+            try:
+                api_response = sc.create_storage_class(current_storage_class, current_storage_service.name)
+                # pprint(api_response)
+                wait_operation_succeeded(api_response.id, client)
+            except ApiException as e:
+                print("Exception when calling StorageClassesApi->create_storage_class: %s\n" % e)
+    print("Done setting up storage policies!")
 
-generic = fusion.StorageServicePost(
-    name="generic",
-    display_name="generic",
-    hardware_types=["flash-array-c", "flash-array-x"]
-)
-
-db_high_performance = fusion.StorageClassPost(
-    name="db_high_performance",
-    display_name="db_high_performance",
-    iops_limit=10000, # 10k iops
-    bandwidth_limit=524288000, # 500 MB/s
-    size_limit=100000000000000 # 100 TB
-)
-
-db_standard = fusion.StorageClassPost(
-    name="db_standard",
-    display_name="db_standard",
-    iops_limit = 5000, # 5k iops
-    bandwidth_limit = 262144000, # 250 MB/s
-    size_limit=100000000000000 # 100 TB
-)
-
-db_bulk = fusion.StorageClassPost(
-    name="db_bulk",
-    display_name="db_bulk",
-    iops_limit = 1000, # 1k iops
-    bandwidth_limit = 52428800, # 50 MB/s
-    size_limit=100000000000000 # 100 TB
-)
-
-try:        
-    api_response = ss.create_storage_service(flash_performance)
-    pprint(api_response)
-    wait_operation_succeeded(api_response.id, client)
-
-    api_response = ss.create_storage_service(flash_capacity)
-    pprint(api_response)
-    wait_operation_succeeded(api_response.id, client)
-
-    api_response = ss.create_storage_service(generic)
-    pprint(api_response)
-    wait_operation_succeeded(api_response.id, client)
-
-    for ss_name in ["flash_capacity", "flash_performance", "generic"]:
-        api_response = sc.create_storage_class(db_high_performance, ss_name)
-        pprint(api_response)
-        wait_operation_succeeded(api_response.id, client)
-
-        api_response = sc.create_storage_class(db_standard, ss_name)
-        pprint(api_response)
-        wait_operation_succeeded(api_response.id, client)
-
-        api_response = sc.create_storage_class(db_bulk, ss_name)
-        pprint(api_response)
-        wait_operation_succeeded(api_response.id, client)
-
-except ApiException as e:
-    print("Exception when calling StorageClassesApi->create_storage_class: %s\n" % e)
-print("Done!")
+if __name__ == '__main__':
+    setup_storage_policies()

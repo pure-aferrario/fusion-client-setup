@@ -1,0 +1,87 @@
+---
+# Storage Policies (Storage Services and Storage Classes)
+storage_services:
+- name: flash_performance
+  display_name: flash_performance
+  hardware_types:
+  - flash-array-x
+  storage_classes:
+  - name: db_high_performance
+    display_name: db_high_performance
+    iops_limit: 10000
+    bandwidth_limit: 524288000
+    size_limit: 100000000000000
+  - name: db_standard
+    display_name: db_standard
+    iops_limit: 5000
+    bandwidth_limit: 262144000
+    size_limit: 100000000000000
+  - name: db_bulk
+    display_name: db_bulk
+    iops_limit: 1000
+    bandwidth_limit: 52428800
+    size_limit: 100000000000000
+- name: flash_capacity
+  display_name: flash_capacity
+  hardware_types:
+  - flash-array-c
+  storage_classes:
+  - name: db_high_performance
+    display_name: db_high_performance
+    iops_limit: 10000
+    bandwidth_limit: 524288000
+    size_limit: 100000000000000
+  - name: db_standard
+    display_name: db_standard
+    iops_limit: 5000
+    bandwidth_limit: 262144000
+    size_limit: 100000000000000
+  - name: db_bulk
+    display_name: db_bulk
+    iops_limit: 1000
+    bandwidth_limit: 52428800
+    size_limit: 100000000000000
+- name: generic
+  display_name: generic
+  hardware_types:
+  - flash-array-x
+  - flash-array-c
+  storage_classes:
+  - name: db_high_performance
+    display_name: db_high_performance
+    iops_limit: 10000
+    bandwidth_limit: 524288000
+    size_limit: 100000000000000
+  - name: db_standard
+    display_name: db_standard
+    iops_limit: 5000
+    bandwidth_limit: 262144000
+    size_limit: 100000000000000
+  - name: db_bulk
+    display_name: db_bulk
+    iops_limit: 1000
+    bandwidth_limit: 52428800
+    size_limit: 100000000000000
+# Protection Policies
+protection_policies:
+- name: db_fifteen
+  display_name: db_fifteen
+  objectives:
+  - type: RPO
+    rpo: PT15M
+  - type: Retention
+    after: PT24H
+- name: hourly_for_a_week
+  display_name: hourly_for_a_week
+  objectives:
+  - type: RPO
+    rpo: PT1H
+  - type: Retention
+    after: PT168H
+- name: daily_for_a_month
+  display_name: daily_for_a_month
+  objectives:
+  - type: RPO
+    rpo: PT24H
+  - type: Retention
+    after: PT730H

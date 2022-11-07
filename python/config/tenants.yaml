@@ -1,0 +1,8 @@
+---
+# List of Tenants
+- name: engineering
+  display_name: engineering
+- name: finance
+  display_name: finance
+- name: oracle_dbas
+  display_name: oracle_dbas

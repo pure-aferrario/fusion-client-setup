@@ -1,158 +1,120 @@
 import fusion
 import os
+import pathlib
+import yaml
 from fusion.rest import ApiException
 from pprint import pprint
 from utils import wait_operation_succeeded
 
-# Setup Config
-config = fusion.Configuration()
-config.issuer_id = os.getenv("API_CLIENT")
-config.private_key_file = os.getenv("PRIV_KEY_FILE")
+def setup_infrastructure():
+    print("Setting up infrastructure")
+    # Setup Config
+    config = fusion.Configuration()
+    config.issuer_id = os.getenv("API_CLIENT")
+    config.private_key_file = os.getenv("PRIV_KEY_FILE")
 
-client = fusion.ApiClient(config)
-r = fusion.RegionsApi(api_client=client)
-az = fusion.AvailabilityZonesApi(api_client=client)
-se = fusion.StorageEndpointsApi(api_client=client)
-a = fusion.ArraysApi(api_client=client)
-nig = fusion.NetworkInterfaceGroupsApi(api_client=client)
-ni = fusion.NetworkInterfacesApi(api_client=client)
+    client = fusion.ApiClient(config)
+    r = fusion.RegionsApi(api_client=client)
+    az = fusion.AvailabilityZonesApi(api_client=client)
+    se = fusion.StorageEndpointsApi(api_client=client)
+    a = fusion.ArraysApi(api_client=client)
+    nig = fusion.NetworkInterfaceGroupsApi(api_client=client)
+    ni = fusion.NetworkInterfacesApi(api_client=client)
 
-region = "region1"
-availability_zone = "az1"
+    # Load configuration
+    with open(pathlib.Path(__file__).parent / "config/infrastructure.yaml") as file:
+        infrastructure = yaml.safe_load(file)
 
-network_mtu = 1500
-network_interface_group = {
-    "name": "interface_group1",
-    "display_name": "interface_group1",
-    "group_type": "eth",
-    "eth": {
-        "prefix": "172.17.1.0/24",
-        "mtu": network_mtu
-    }
-}
-storage_endpoint = {
-    "name": "default",
-    "display_name": "default",
-    "endpoint_type": "iscsi",
-    "iscsi": [
-        {
-            "address": "172.17.1.1/24",
-            # "mtu": network_mtu,
-            "network_interface_groups": [network_interface_group["name"]]
-        },
-        {
-            "address": "172.17.1.2/24",
-            # "mtu": network_mtu,
-            "network_interface_groups": [network_interface_group["name"]]
-        }
-        # Storage Endpoint supports up to 4 ip addresses, but we're only going to be using 2
-        # for the Virtual Lab because the virtual FlashArrays only have 1 controller each.
-#        {
-#            "address": "172.17.1.3/24",
-            # "mtu": network_mtu,
-#            "network_interface_groups": [network_interface_group["name"]]
-#        },
-#        {
-#            "address": "172.17.1.4/24",
-            # "mtu": network_mtu,
-#            "network_interface_groups": [network_interface_group["name"]]
-#        }
-        ]
-    }
-
-arrays = [
-    {
-        "name": "flasharray1",
-        "display_name": "flasharray1",
-        "appliance_id": "1187351-242133817-5976825671211737520",
-        "host_name": "flasharray1",
-        "hardware_type": "flash-array-x"
-    },
-    {
-        "name": "flasharray2",
-        "display_name": "flasharray2",
-        "appliance_id": "4044399-202674005-8936155360115641845",
-        "host_name": "flasharray2",
-        "hardware_type": "flash-array-x"
-    }
-]
-# Create Region
-region1 = fusion.RegionPost(name=region, display_name=region)
-try:
-    api_response = r.create_region(region1)
-    pprint(api_response)
-    wait_operation_succeeded(api_response.id, client)
-except ApiException as e:
-    print("Exception when calling RegionsApi->create_region: %s\n" % e)
-# Create Availability Zone
-az1 = fusion.AvailabilityZonePost(name=availability_zone, display_name=availability_zone)
-try:
-    api_response = az.create_availability_zone(az1, region1.name)
-    pprint(api_response)
-    wait_operation_succeeded(api_response.id, client)
-except ApiException as e:
-    print("Exception when calling AvailabilityZonesApi->create_availability_zone: %s\n" % e)
-# Create Network Interface Group
-interface_group1 = fusion.NetworkInterfaceGroupPost(
-    name=network_interface_group["name"],
-    display_name=network_interface_group["display_name"],
-    group_type=network_interface_group["group_type"],
-    eth=fusion.NetworkInterfaceGroupEthPost(
-        prefix=network_interface_group["eth"]["prefix"],
-        mtu=network_interface_group["eth"]["mtu"]
-    )
-    )
-try:
-    api_response = nig.create_network_interface_group(interface_group1, region1.name, az1.name)
-    pprint(api_response)
-    wait_operation_succeeded(api_response.id, client)
-except ApiException as e:
-    print("Exception when calling NetworkInterfaceGroupApi->create_network_interface_group: %s\n" % e)
-# Create Storage Endpoint
-default = fusion.StorageEndpointPost(
-    name=storage_endpoint["name"],
-    display_name=storage_endpoint["display_name"],
-    endpoint_type=storage_endpoint["endpoint_type"],
-    iscsi=fusion.StorageEndpointIscsiPost(
-            discovery_interfaces= [fusion.StorageEndpointIscsiDiscoveryInterface(**endpoint) for endpoint in storage_endpoint["iscsi"]]
-        )
-    )
-try:
-    api_response = se.create_storage_endpoint(default, region1.name, az1.name)
-    pprint(api_response)
-    wait_operation_succeeded(api_response.id, client)
-except ApiException as e:
-    print("Exception when calling StorageEndpointsApi->create_storage_endpoint: %s\n" % e)
-# Add Arrays into Availability Zone
-for array in arrays:
-    current_array = fusion.ArrayPost(**array)
-    try:
-        api_response = a.create_array(current_array, region1.name, az1.name)
-        pprint(api_response)
-        wait_operation_succeeded(api_response.id, client)
-    except ApiException as e:
-        print("Exception when calling StorageEndpointsApi->create_storage_endpoint: %s\n" % e)
-    patch_array = fusion.ArrayPatch(maintenance_mode=fusion.NullableBoolean(False))
-    try:
-        api_response = a.update_array(patch_array, region1.name, az1.name, array["name"])
-        pprint(api_response)
-        wait_operation_succeeded(api_response.id, client)
-    except ApiException as e:
-        print("Exception when calling StorageEndpointsApi->create_storage_endpoint: %s\n" % e)
-    try:
-        ni_list = ni.list_network_interfaces(region1.name, az1.name, array["name"])
-        pprint(ni_list)
-        wait_operation_succeeded(api_response.id, client)
-    except ApiException as e:
-        print("Exception when calling NetworkInterfacesApi->list_network_interfaces: %s\n" % e)
-    # Add Arrays into Availability Zone
-    for network_interface in ni_list.items:
-        print("network_interface", network_interface.name)
-        patch_network_interface = fusion.NetworkInterfacePatch(network_interface_group=fusion.NullableString(network_interface_group["name"]))
+    # Create Regions
+    for region in infrastructure:
+        print("Creating region", region["name"])
+        current_region = fusion.RegionPost(name=region["name"], display_name=region["display_name"])
         try:
-            api_response = ni.update_network_interface(patch_network_interface, region1.name, az1.name, array["name"], network_interface.name)
-            pprint(api_response)
+            api_response = r.create_region(current_region)
+            # pprint(api_response)
             wait_operation_succeeded(api_response.id, client)
         except ApiException as e:
-            print("Exception when calling StorageEndpointsApi->create_storage_endpoint: %s\n" % e)
-print("Done!")
+            print("Exception when calling RegionsApi->create_region: %s\n" % e)
+        # Create Availability Zones
+        for availability_zone in region["availability_zones"]:
+            print("Creating availability zone", availability_zone["name"], "in region", region["name"])
+            current_az = fusion.AvailabilityZonePost(name=availability_zone["name"], display_name=availability_zone["display_name"])
+            try:
+                api_response = az.create_availability_zone(current_az, current_region.name)
+                # pprint(api_response)
+                wait_operation_succeeded(api_response.id, client)
+            except ApiException as e:
+                print("Exception when calling AvailabilityZonesApi->create_availability_zone: %s\n" % e)
+            # Create Network Interface Groups
+            for network_interface_group in availability_zone["network_interface_groups"]:
+                print("Creating network interface group", network_interface_group["name"], "in availability zone", availability_zone["name"], "in region", region["name"])
+                current_nig = fusion.NetworkInterfaceGroupPost(
+                    name=network_interface_group["name"],
+                    display_name=network_interface_group["display_name"],
+                    group_type=network_interface_group["group_type"],
+                    eth=fusion.NetworkInterfaceGroupEthPost(
+                        prefix=network_interface_group["eth"]["prefix"],
+                        mtu=network_interface_group["eth"]["mtu"]
+                    )
+                    )
+                try:
+                    api_response = nig.create_network_interface_group(current_nig, current_region.name, current_az.name)
+                    # pprint(api_response)
+                    wait_operation_succeeded(api_response.id, client)
+                except ApiException as e:
+                    print("Exception when calling NetworkInterfaceGroupApi->create_network_interface_group: %s\n" % e)
+            # Create Storage Endpoints
+            for storage_endpoint in availability_zone["storage_endpoints"]:
+                print("Creating storage endpoint", storage_endpoint["name"], "in availability zone", availability_zone["name"], "in region", region["name"])
+                current_storage_endpoint = fusion.StorageEndpointPost(
+                    name=storage_endpoint["name"],
+                    display_name=storage_endpoint["display_name"],
+                    endpoint_type=storage_endpoint["endpoint_type"],
+                    iscsi=fusion.StorageEndpointIscsiPost(
+                            discovery_interfaces= [fusion.StorageEndpointIscsiDiscoveryInterface(**endpoint) for endpoint in storage_endpoint["iscsi"]]
+                        )
+                    )
+                try:
+                    api_response = se.create_storage_endpoint(current_storage_endpoint, current_region.name, current_az.name)
+                    # pprint(api_response)
+                    wait_operation_succeeded(api_response.id, client)
+                except ApiException as e:
+                    print("Exception when calling StorageEndpointsApi->create_storage_endpoint: %s\n" % e)
+            # Add Arrays into Availability Zone
+            for array in availability_zone["arrays"]:
+                print("Creating array", array["name"], "in availability zone", availability_zone["name"], "in region", region["name"])
+                current_array = fusion.ArrayPost(**array)
+                try:
+                    api_response = a.create_array(current_array, current_region.name, current_az.name)
+                    # pprint(api_response)
+                    wait_operation_succeeded(api_response.id, client)
+                except ApiException as e:
+                    print("Exception when calling StorageEndpointsApi->create_storage_endpoint: %s\n" % e)
+                print("Turning off maintenance mode on array", array["name"], "in availability zone", availability_zone["name"], "in region", region["name"])
+                patch_array = fusion.ArrayPatch(maintenance_mode=fusion.NullableBoolean(False))
+                try:
+                    api_response = a.update_array(patch_array, current_region.name, current_az.name, array["name"])
+                    # pprint(api_response)
+                    wait_operation_succeeded(api_response.id, client)
+                except ApiException as e:
+                    print("Exception when calling StorageEndpointsApi->create_storage_endpoint: %s\n" % e)
+                try:
+                    ni_list = ni.list_network_interfaces(current_region.name, current_az.name, array["name"])
+                    # pprint(ni_list)
+                    wait_operation_succeeded(api_response.id, client)
+                except ApiException as e:
+                    print("Exception when calling NetworkInterfacesApi->list_network_interfaces: %s\n" % e)
+                # Add Arrays into Availability Zone
+                for network_interface in ni_list.items:
+                    print("Connecting network interface", network_interface.name,"on array", array["name"], "to network_interface_group", network_interface_group["name"], "in availability zone", availability_zone["name"], "in region", region["name"])
+                    patch_network_interface = fusion.NetworkInterfacePatch(network_interface_group=fusion.NullableString(network_interface_group["name"]))
+                    try:
+                        api_response = ni.update_network_interface(patch_network_interface, current_region.name, current_az.name, array["name"], network_interface.name)
+                        # pprint(api_response)
+                        wait_operation_succeeded(api_response.id, client)
+                    except ApiException as e:
+                        print("Exception when calling StorageEndpointsApi->create_storage_endpoint: %s\n" % e)
+    print("Done setting up infrastructure!")
+
+if __name__ == '__main__':
+    setup_infrastructure()
