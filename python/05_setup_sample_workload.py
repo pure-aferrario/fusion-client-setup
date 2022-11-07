@@ -20,7 +20,7 @@ tenant = 'oracle_dbas'
 tenant_space = "db_tenant_space"
 placement_group = "pg1"
 storage_service = "flash_performance"
-iqn= "iqn.2005-03.com.RedHat:linux-host1"
+iqn= "iqn.1994-05.com.redhat:9dd57693efb"
 personality = "linux"
 
 # Create Tenant-Space for our DB application
@@ -86,7 +86,7 @@ log_vol = fusion.VolumePost(
 config_volume = fusion.VolumePost(
     name="config_vol",
     display_name="config_vol",
-    size=500000000000, # 5TB
+    size=500000000000, # 500GB
     storage_class="db_bulk",
     placement_group=placement_group,
     protection_policy="db_fifteen"
