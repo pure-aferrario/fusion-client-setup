@@ -44,17 +44,19 @@ storage_endpoint = {
             "address": "172.17.1.2/24",
             # "mtu": network_mtu,
             "network_interface_groups": [network_interface_group["name"]]
-        },
-        {
-            "address": "172.17.1.3/24",
-            # "mtu": network_mtu,
-            "network_interface_groups": [network_interface_group["name"]]
-        },
-        {
-            "address": "172.17.1.4/24",
-            # "mtu": network_mtu,
-            "network_interface_groups": [network_interface_group["name"]]
         }
+        # Storage Endpoint supports up to 4 ip addresses, but we're only going to be using 2
+        # for the Virtual Lab because the virtual FlashArrays only have 1 controller each.
+#        {
+#            "address": "172.17.1.3/24",
+            # "mtu": network_mtu,
+#            "network_interface_groups": [network_interface_group["name"]]
+#        },
+#        {
+#            "address": "172.17.1.4/24",
+            # "mtu": network_mtu,
+#            "network_interface_groups": [network_interface_group["name"]]
+#        }
         ]
     }
 
@@ -112,12 +114,7 @@ default = fusion.StorageEndpointPost(
     display_name=storage_endpoint["display_name"],
     endpoint_type=storage_endpoint["endpoint_type"],
     iscsi=fusion.StorageEndpointIscsiPost(
-            discovery_interfaces= [ 
-                fusion.StorageEndpointIscsiDiscoveryInterface(**storage_endpoint["iscsi"][0]),
-                fusion.StorageEndpointIscsiDiscoveryInterface(**storage_endpoint["iscsi"][1]),
-                fusion.StorageEndpointIscsiDiscoveryInterface(**storage_endpoint["iscsi"][2]),
-                fusion.StorageEndpointIscsiDiscoveryInterface(**storage_endpoint["iscsi"][3]),        
-            ]
+            discovery_interfaces= [fusion.StorageEndpointIscsiDiscoveryInterface(**endpoint) for endpoint in storage_endpoint["iscsi"]]
         )
     )
 try:
