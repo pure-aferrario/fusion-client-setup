@@ -1,33 +1,35 @@
 import fusion
 import os
+import pathlib
+import yaml
 from pprint import pprint
 from utils import wait_operation_succeeded
 
-# Setup Config
-config = fusion.Configuration()
-config.issuer_id = os.getenv("API_CLIENT")
-config.private_key_file = os.getenv("PRIV_KEY_FILE")
+def setup_tenants():
+    print("Setting up tenants")
+    # Setup Config
+    config = fusion.Configuration()
+    config.issuer_id = os.getenv("API_CLIENT")
+    config.private_key_file = os.getenv("PRIV_KEY_FILE")
 
-client = fusion.ApiClient(config)
-t = fusion.TenantsApi(api_client=client)
+    client = fusion.ApiClient(config)
+    t = fusion.TenantsApi(api_client=client)
 
-engineering = fusion.TenantPost(name='engineering', display_name='engineering')
-finance = fusion.TenantPost(name='finance', display_name='finance')
-oracle_dbas = fusion.TenantPost(name='oracle_dbas', display_name='oracle_dbas')
+    # Load configuration
+    with open(pathlib.Path(__file__).parent / "config/tenants.yaml") as file:
+        tenants = yaml.safe_load(file)
 
-# Create Tenants
-try:
-    api_response = t.create_tenant(engineering)
-    pprint(api_response)
-    wait_operation_succeeded(api_response.id, client)
+    # Create Tenants
+    for tenant in tenants:
+        print("Creating tenant", tenant["name"])
+        current_tenant = fusion.TenantPost(name=tenant["name"], display_name=tenant["display_name"])
+        try:
+            api_response = t.create_tenant(current_tenant)
+            # pprint(api_response)
+            wait_operation_succeeded(api_response.id, client)
+        except Exception as e:
+            print("Exception when calling TenantsAPI->create_tenant: %s\n" % e)
+    print("Done setting up tenants!")
 
-    api_response = t.create_tenant(finance)
-    pprint(api_response)
-    wait_operation_succeeded(api_response.id, client)
-
-    api_response = t.create_tenant(oracle_dbas)
-    pprint(api_response)
-    wait_operation_succeeded(api_response.id, client)
-except Exception as e:
-    print("Exception when calling ProtectionPoliciesAPI->create_tenant: %s\n" % e)
-print("Done!")
+if __name__ == '__main__':
+    setup_tenants()
