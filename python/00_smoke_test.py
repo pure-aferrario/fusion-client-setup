@@ -8,7 +8,7 @@ def smoke_test():
     # Configure OAuth2 access token for authorization
     configuration = fusion.Configuration()
     configuration.issuer_id = getenv('API_CLIENT')
-    configuration.private_key_file = getenv('PATH_TO_KEY')
+    configuration.private_key_file = getenv('PRIV_KEY_FILE')
 
     # create an API client with your access Configuration
     base_client = fusion.ApiClient(configuration)
