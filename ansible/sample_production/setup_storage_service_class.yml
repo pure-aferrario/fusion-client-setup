@@ -1,0 +1,41 @@
+---
+- hosts: localhost
+  # this playbook create a new storage service and class
+  # wiki: https://docs.ansible.com/ansible/latest/collections/purestorage/fusion/fusion_ss_module.html#ansible-collections-purestorage-fusion-fusion-ss-module
+  # wiki: https://docs.ansible.com/ansible/latest/collections/purestorage/fusion/fusion_sc_module.html#ansible-collections-purestorage-fusion-fusion-sc-module
+
+  tasks:
+  - include_vars: group_vars/storage_service_class.yml
+
+  - name: Check private key exists
+    stat:
+      path: "{{ priv_key_file }}"
+    register: result
+
+  - name: End run if missing private key
+    meta: end_play
+    when: (result.stat.isreg is undefined) or (not result.stat.isreg)
+    
+  - name:  Create new storage service called {{storage_service_name}}
+    purestorage.fusion.fusion_ss:
+      # wiki: https://docs.ansible.com/ansible/latest/collections/purestorage/fusion/fusion_ss_module.html#ansible-collections-purestorage-fusion-fusion-ss-module
+      app_id: "{{ api_client }}"
+      key_file: "{{ priv_key_file }}"
+      name: "{{ storage_service_name }}"
+      display_name: "{{ storage_service_name }}"
+      hardware_types:
+      - "{{ hardware_types }}"
+      state: present # or absent
+
+  - name: Create new storage class {{ storage_class_name }}
+    purestorage.fusion.fusion_sc:
+      #wiki: https://docs.ansible.com/ansible/latest/collections/purestorage/fusion/fusion_sc_module.html#ansible-collections-purestorage-fusion-fusion-sc-module
+      app_id: "{{ api_client }}"
+      key_file: "{{ priv_key_file }}"
+      name: "{{ storage_class_name }}"
+      display_name: "{{ storage_class_name }}"
+      storage_service: "{{ storage_service_name }}"
+      size_limit: "{{ size_limit }}"
+      iops_limit: "{{ iops_limit }}"
+      bw_limit: "{{ bw_limit }}"
+      state: present # or absent
