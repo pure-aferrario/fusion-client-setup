@@ -36,10 +36,9 @@ fi
 # relative = private_key.pem
 case $pathToKey in
   /*) echo -e "${green}Starting install setup${nocolor}" ;;
-  *) echo -e "Please use absolute path for private key: $pathToKey${nocolor}"
-    #current_path=$
-    echo -e "Example: $(pwd)/$pathToKey"
-    exit ;;
+   *) echo -e "Please use absolute path for private key: $pathToKey${nocolor}"
+      echo -e "Example: $(pwd)/$pathToKey"
+      exit ;;
 esac
 
 export API_CLIENT="$apiClient"
