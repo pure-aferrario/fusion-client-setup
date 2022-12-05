@@ -39,7 +39,7 @@ case $pathToKey in
   *) echo -e "Please use absolute path for private key: $pathToKey${nocolor}"
     #current_path=$
     echo -e "Example: $(pwd)/$pathToKey"
-     exit ;;
+    exit ;;
 esac
 
 export API_CLIENT="$apiClient"
