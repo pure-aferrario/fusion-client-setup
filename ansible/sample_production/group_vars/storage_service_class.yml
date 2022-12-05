@@ -1,0 +1,9 @@
+# storage service variables
+storage_service_name: ss_name
+
+# storage class variables
+storage_class_name: "sc_name"
+hardware_types: "flash-array-c"
+size_limit: "1T" #100M 100G 100T 100P Default 4PB
+iops_limit: "10000" #10000
+bw_limit: "4194M"
