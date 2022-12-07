@@ -1,0 +1,61 @@
+---
+- hosts: localhost
+
+  tasks:
+  - include_vars: group_vars/workloads.yml
+
+  - name: Check private key exists
+    stat:
+      path: "{{ priv_key_file }}"
+    register: result
+
+  - name: End run if missing private key
+    meta: end_play
+    when: (result.stat.isreg is undefined) or (not result.stat.isreg)
+
+  - name: Create new tenant space(s)
+    purestorage.fusion.fusion_ts:
+      app_id: "{{ api_client }}"
+      key_file: "{{ priv_key_file }}"
+      name: "{{ item.name }}"
+      tenant: "{{ item.tenant }}"
+      state: "present" # or absent
+    loop: "{{ tenant_space }}"
+
+  - name: Create new placement group(s)
+    purestorage.fusion.fusion_pg:
+      app_id: "{{ api_client }}"
+      key_file: "{{ priv_key_file }}"
+      name: "{{ item.name }}"
+      tenant: "{{ item.tenant }}"
+      tenant_space: "{{ item.tenant_space }}"
+      availability_zone: "{{ item.availability_zone }}"
+      placement_engine: "{{ item.placement_engine }}"
+      state: "present" # or absent
+    loop: "{{ placement_groups }}"
+
+  - name: Create new AIX host access policy
+    purestorage.fusion.fusion_hap:
+      app_id: "{{ api_client }}"
+      key_file: "{{ priv_key_file }}"
+      name: "{{ item.name }}"
+      display_name: "{{ item.display_name }}"
+      personality: "{{ item.personality }}"
+      iqn: "{{ item.iqn }}"
+      state: "present" # or absent
+    loop: "{{ host_access_policies }}"
+
+  - name: Create new volume(s)
+    purestorage.fusion.fusion_volume:
+      app_id: "{{ api_client }}"
+      key_file: "{{ priv_key_file }}"
+      name: "{{ item.name }}"
+      display_name: "{{ item.display_name }}"
+      size: "{{ item.size }}"
+      storage_class: "{{ item.storage_class }}"
+      tenant: "{{ item.tenant }}"
+      tenant_space: "{{ item.tenant_space }}"
+      placement_group: "{{ item.placement_group }}"
+      hosts: "{{ item.host_access_policies }}"
+      state: "present" # or absent
+    loop: "{{ volumes }}"

@@ -1,0 +1,53 @@
+tenant_space:
+  - name: tenant_space
+    tenant: tenant_name
+
+placement_groups:
+  - name: pg1
+    display_name: pg1
+    storage_service: flash_performance
+    tenant: tenant_name
+    tenant_space: tenant_space
+    region: region_name
+    availability_zone: "az1"
+    placement_engine: "heuristics" # or pure1meta
+
+host_access_policies:
+  - name: customer_host_access
+    display_name: customer_host_access
+    iqn: iqn.1994-05.com.redhat:9dd57693efb
+    personality: linux
+
+volumes:
+  - name: data_vol1
+    display_name: data_vol1
+    size: 500GB
+    storage_class: db_high_performance
+    tenant: tenant_name
+    tenant_space: tenant_space
+    placement_group: pg1
+    host_access_policies: customer_host_access
+  - name: data_vol2
+    display_name: data_vol2
+    size: 500GB
+    storage_class: db_high_performance
+    tenant: tenant_name
+    tenant_space: tenant_space
+    placement_group: pg1
+    host_access_policies: customer_host_access
+  - name: log_vol
+    display_name: log_vol
+    size: 500GB
+    storage_class: db_standard
+    tenant: tenant_name
+    tenant_space: tenant_space
+    placement_group: pg1
+    host_access_policies: customer_host_access
+  - name: config_vol
+    display_name: config_vol
+    size: 500GB
+    tenant: tenant_name
+    tenant_space: tenant_space
+    storage_class: db_bulk
+    placement_group: pg1
+    host_access_policies: customer_host_access
