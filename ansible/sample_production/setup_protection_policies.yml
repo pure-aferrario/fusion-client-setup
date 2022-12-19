@@ -2,7 +2,7 @@
 - hosts: localhost
   # this playbook create a new protection policy
   # wiki: https://docs.ansible.com/ansible/latest/collections/purestorage/fusion/fusion_pp_module.html#ansible-collections-purestorage-fusion-fusion-pp-module
- 
+
   tasks:
   - include_vars: group_vars/protection_policies.yml
 
@@ -14,13 +14,14 @@
   - name: End run if missing private key
     meta: end_play
     when: (result.stat.isreg is undefined) or (not result.stat.isreg)
-    
-  - name: Create new protection policy {{ protection_policy_name }}
+
+  - name: Create new protection policy(s)
     purestorage.fusion.fusion_pp:
       app_id: "{{ api_client }}"
       key_file: "{{ priv_key_file }}"
-      name: "{{ protection_policy_name }}"
-      display_name: "{{ protection_policy_name }}"
-      local_rpo: "{{ local_rpo }}"
-      local_retention: "{{ local_retention }}"
       state: present # or absent
+      name: "{{ item.name }}"
+      display_name: "{{ item.display_name }}"
+      local_rpo: "{{ item.local_rpo }}"
+      local_retention: "{{ item.local_retention }}"
+    loop: "{{ protection_policy }}"
