@@ -17,7 +17,7 @@ If you need a high level overview of Pure Fusion please check out [this Youtube 
 The objective of this guide is to help you setup the tools you can use to interact with your Fusion environment. To that end, you should start by making the setup script executable and running it.
 ```
 sudo chmod +x setup.sh
-./setup.sh API_CLIENT_ID PATH_TO_PRIV_KEY
+./setup.sh API_CLIENT_ID /absolute/PATH_TO_PRIV_KEY
 ```
 Running this script will set up the following.
 ### HMCTL
