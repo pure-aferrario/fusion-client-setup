@@ -15,27 +15,28 @@
   - name: End run if missing private key
     meta: end_play
     when: (result.stat.isreg is undefined) or (not result.stat.isreg)
-    
-  - name:  Create new storage service called {{storage_service_name}}
+
+  - name:  Create new storage service
     purestorage.fusion.fusion_ss:
       # wiki: https://docs.ansible.com/ansible/latest/collections/purestorage/fusion/fusion_ss_module.html#ansible-collections-purestorage-fusion-fusion-ss-module
       app_id: "{{ api_client }}"
       key_file: "{{ priv_key_file }}"
-      name: "{{ storage_service_name }}"
-      display_name: "{{ storage_service_name }}"
-      hardware_types:
-      - "{{ hardware_types }}"
       state: present # or absent
+      name: "{{ item.name }}"
+      display_name: "{{ item.display_name }}"
+      hardware_types: "{{ item.hardware_types }}"
+    loop: "{{ storage_service }}"
 
-  - name: Create new storage class {{ storage_class_name }}
+  - name: Create new storage class
     purestorage.fusion.fusion_sc:
       #wiki: https://docs.ansible.com/ansible/latest/collections/purestorage/fusion/fusion_sc_module.html#ansible-collections-purestorage-fusion-fusion-sc-module
       app_id: "{{ api_client }}"
       key_file: "{{ priv_key_file }}"
-      name: "{{ storage_class_name }}"
-      display_name: "{{ storage_class_name }}"
-      storage_service: "{{ storage_service_name }}"
-      size_limit: "{{ size_limit }}"
-      iops_limit: "{{ iops_limit }}"
-      bw_limit: "{{ bw_limit }}"
       state: present # or absent
+      name: "{{ item.name }}"
+      display_name: "{{ item.display_name }}"
+      storage_service: "{{ item.storage_service }}"
+      size_limit: "{{ item.size_limit }}"
+      iops_limit: {{ item.iops_limit }}
+      bw_limit: "{{ item.bw_limit }}"
+    loop: "{{ storage_class }}"
