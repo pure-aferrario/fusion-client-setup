@@ -52,15 +52,35 @@ echo "
 ██       ██████  ██   ██ ███████ ███████    ██     ██████  ██   ██ ██   ██  ██████  ███████
 "
 
-
+# detect OS name
+os_name=$(cat /etc/os-release | grep "ID" | head -1)
+if [[ "$os_name" == *"centos"* ]]; then
+  os_name="Centos"
+elif [[ "$os_name" == *"buntu"* ]]; then
+  os_name="Ubuntu"
+else
+  echo -e "${red}Cant detect OS${nocolor}"
+  exit
+fi
 
 # HMCTL setup
+
+if [ $os_name == "Centos" ]; then
+  sudo yum -y install wget
+fi
+
 echo -e "${blue}################################"
 echo -e "#         HMCTL setup          #"
 echo -e "################################${nocolor}"
 
 echo -e "${green}Downloading HMCTL..."
-sudo wget -q --show-progress -O /usr/bin/hmctl https://github.com/PureStorage-OpenConnect/hmctl/releases/latest/download/hmctl-linux-amd64
+if [ $os_name == "Centos" ]; then
+  sudo wget -O /usr/bin/hmctl https://github.com/PureStorage-OpenConnect/hmctl/releases/latest/download/hmctl-linux-amd64
+else
+  sudo wget -q --show-progress -O /usr/bin/hmctl https://github.com/PureStorage-OpenConnect/hmctl/releases/latest/download/hmctl-linux-amd64
+fi
+
+
 # check last command exit status
 if [ $? -eq 0 ]; then
   echo -e "${green}HMCTL download to: /usr/bin/hmctl"
@@ -96,8 +116,13 @@ echo -e "${blue}################################"
 echo -e "#         Python setup         #"
 echo -e "################################${nocolor}"
 
-sudo apt -qq update
-sudo apt install -y python3-pip
+if [ $os_name == "Centos" ]; then
+  sudo yum -y install python3-pip
+  sudo pip3 install --upgrade pip
+else
+  sudo apt -qq update
+  sudo apt install -y python3-pip
+fi
 
 echo -e "${blue}################################"
 echo -e "#    Python Lib: Purefusion    #"
@@ -123,8 +148,9 @@ fi
 echo -e "${blue}################################"
 echo -e "#         Ansible setup        #"
 echo -e "################################${nocolor}"
-sudo apt install -y ansible
+pip3 install ansible
 ansible-galaxy collection install purestorage.fusion
+
 
 # Ansible test
 echo -e "${blue}################################"
@@ -143,25 +169,29 @@ else
   echo -e "################################${nocolor}"
 fi
 
-
-
 # Terraform setup
 echo -e "${blue}################################"
 echo -e "#       Terraform setup        #"
 echo -e "################################${nocolor}"
-# install dependencies
-sudo apt install -y gnupg software-properties-common
-# download gpg key
-wget -q -O- https://apt.releases.hashicorp.com/gpg | gpg --dearmor | sudo tee /usr/share/keyrings/hashicorp-archive-keyring.gpg >/dev/null 2>&1
-# add gpg key
-gpg --no-default-keyring --keyring /usr/share/keyrings/hashicorp-archive-keyring.gpg --fingerprint
-# add repo file to /etc/apt/sources.list.d
-echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] \
-    https://apt.releases.hashicorp.com $(lsb_release -cs) main" | \
-    sudo tee /etc/apt/sources.list.d/hashicorp.list
+if [ $os_name == "Centos" ]; then
+  sudo yum install -y yum-utils
+  sudo yum-config-manager --add-repo https://rpm.releases.hashicorp.com/RHEL/hashicorp.repo
+  sudo yum -y install terraform
+else
+  # install dependencies
+  sudo apt install -y gnupg software-properties-common
+  # download gpg key
+  wget -q -O- https://apt.releases.hashicorp.com/gpg | gpg --dearmor | sudo tee /usr/share/keyrings/hashicorp-archive-keyring.gpg >/dev/null 2>&1
+  # add gpg key
+  gpg --no-default-keyring --keyring /usr/share/keyrings/hashicorp-archive-keyring.gpg --fingerprint
+  # add repo file to /etc/apt/sources.list.d
+  echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] \
+      https://apt.releases.hashicorp.com $(lsb_release -cs) main" | \
+      sudo tee /etc/apt/sources.list.d/hashicorp.list
 
-sudo apt -qq update
-sudo apt install -y terraform
+  sudo apt -qq update
+  sudo apt install -y terraform
+fi
 
 # Terraform test
 echo -e "${blue}################################"
