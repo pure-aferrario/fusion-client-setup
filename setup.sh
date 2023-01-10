@@ -53,7 +53,7 @@ echo "
 "
 
 # detect OS name
-os_name=$(cat /etc/os-release | grep "ID" | head -1)
+os_name=$(cat /etc/os-release | grep "^ID=" | head -1)
 if [[ "$os_name" == *"centos"* ]]; then
   os_name="Centos"
 elif [[ "$os_name" == *"buntu"* ]]; then
@@ -94,9 +94,9 @@ sudo chmod +x /usr/bin/hmctl
 mkdir -p ~/.pure/
 # create file: ~/.pure/fusion.json (replace if exist)
 echo '{
-  "default_profile": "pm-lab-admin",
+  "default_profile": "main",
   "profiles": {
-    "pm-lab-admin": {
+    "main": {
       "env": "pure1",
       "endpoint": "https://api.pure1.purestorage.com/fusion",
       "auth": {
