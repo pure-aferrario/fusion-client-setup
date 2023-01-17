@@ -1,0 +1,215 @@
+---
+- hosts: Initiators_Hosts
+
+  become: true
+  tasks: 
+
+    - name: Obtain IQN from Initiators_Hosts
+      shell: cat /etc/iscsi/initiatorname.iscsi | grep "^InitiatorName=iqn" | awk -F'=' '{print $2}'
+      register: iqn
+
+    - name: IQN Results
+      debug:
+        msg: 
+        - "Inventory Hostname: {{inventory_hostname}}"
+        - "Hostname: {{ansible_hostname}}"
+        - "IQN: {{iqn.stdout}}"
+   
+- hosts: localhost
+
+  tasks:
+    - include_vars: group_vars/workloads.yml
+    
+    - set_fact:
+        iqn_data: []
+        map_volumes: {}
+
+    - name: Check private key exists
+      stat:
+        path: "{{ priv_key_file }}"
+      register: result
+
+    - name: End run if missing private key
+      meta: end_play
+      when: (result.stat.isreg is undefined) or (not result.stat.isreg)
+
+    - name: Create IQN/Hostname dictionary
+      set_fact: 
+        iqn_data: "{{ iqn_data|default({}) + [ {'hostname':item, 'iqn':(hostvars[item]['iqn'].stdout)} ] }}"
+      with_items:
+        - "{{ groups['Initiators_Hosts'] }}"
+
+    - name: Create host access policy
+      purestorage.fusion.fusion_hap:
+        app_id: "{{ api_client }}"
+        key_file: "{{ priv_key_file }}"
+        state: "present"
+        name: "{{ item.hostname }}"
+        display_name: "{{ item.hostname }}"
+        personality: "linux"
+        iqn: "{{ item.iqn }}"
+      with_items: "{{iqn_data}}"
+      when: item.iqn != ""
+
+    - name: Create new tenant space(s)
+      purestorage.fusion.fusion_ts:
+        app_id: "{{ api_client }}"
+        key_file: "{{ priv_key_file }}"
+        state: "present"
+        name: "{{ item.name }}"
+        display_name: "{{ item.display_name }}"
+        tenant: "{{ item.tenant }}"
+      loop: "{{ tenant_space }}"
+
+
+    - name: Create new placement group(s)
+      purestorage.fusion.fusion_pg:
+        app_id: "{{ api_client }}"
+        key_file: "{{ priv_key_file }}"
+        state: "present" # or absent
+        name: "{{ item.name }}"
+        display_name: "{{ item.display_name }}"
+        tenant: "{{ item.tenant }}"
+        tenant_space: "{{ item.tenant_space }}"
+        availability_zone: "{{ item.availability_zone }}"
+        region: "{{ item.region }}"
+      loop: "{{ placement_groups }}"
+
+    - name: Create new volume(s)
+      purestorage.fusion.fusion_volume:
+        app_id: "{{ api_client }}"
+        key_file: "{{ priv_key_file }}"
+        state: "present" # or absent
+        name: "{{ item.name }}"
+        display_name: "{{ item.display_name }}"
+        size: "{{ item.size }}"
+        storage_class: "{{ item.storage_class }}"
+        tenant: "{{ item.tenant }}"
+        tenant_space: "{{ item.tenant_space }}"
+        placement_group: "{{ item.placement_group }}"
+        hosts: "{{ item.host_access_policies }}"
+      loop: "{{ volumes }}"
+    
+    - name: Get Volumes info
+      purestorage.fusion.fusion_info:
+        app_id: "{{ api_client }}"
+        key_file: "{{ priv_key_file }}"
+        gather_subset: volumes
+      register: fusion_info
+
+    - name: Map Volumes and Serial ID
+      set_fact:
+        map_volumes: >-
+              {{ map_volumes|combine(
+              { ((fusion_info['fusion_info']['volumes'][item]['name']).lower()) : (prefix_disk + (fusion_info['fusion_info']['volumes'][item]['serial_number']).lower()) }
+              ) }}
+      loop: "{{ fusion_info['fusion_info']['volumes'].keys() }}"
+
+    - name: Get Purestorage Storage Endpoints
+      purestorage.fusion.fusion_info:
+        gather_subset: storage_endpoints
+        app_id: "{{ api_client }}"
+        key_file: "{{ priv_key_file }}"
+      register: reg_fusion_info
+
+- hosts: Initiators_Hosts
+  become: true
+  tasks: 
+    - set_fact:
+        valid_volumes: {}
+        devices_list: {}
+        iscsi_interfaces: []
+        list_ip: []
+        reg_fusion_info: "{{ hostvars['localhost']['reg_fusion_info'] }}"
+
+
+    - name: Obtain list of volumes to mount
+      set_fact:
+        valid_volumes: "{{ valid_volumes|combine( {item.name: item.mount_path} ) }}"
+      with_items: "{{ hostvars['localhost']['volumes'] }}" 
+      when: inventory_hostname in item.host_access_policies
+
+    - debug: msg="{{ valid_volumes }}" 
+
+    - name: Parse volume, mount path and volume id
+      set_fact:
+        devices_list: "{{ devices_list|combine( { valid_volumes[item.key]:item.value } ) }}"
+      with_dict: "{{ hostvars['localhost']['map_volumes'] }}"
+      when: item.key in valid_volumes.keys()
+
+    - debug:
+       msg:
+        - "Mount: /dev/mapper/{{ item.value }}"
+        - "On: {{ item.key }}"
+      with_dict: "{{ devices_list }}"
+
+    - name: Get a list of iscsi_interfaces
+      set_fact:
+        iscsi_interfaces: "{{ iscsi_interfaces + [reg_fusion_info['fusion_info']['storage_endpoints'][item]['iscsi_interfaces']] }}"
+      with_items: "{{ reg_fusion_info['fusion_info']['storage_endpoints'].keys() }}"
+
+    - name: Extract IP from iscsi_interfaces
+      set_fact:
+        list_ip: "{{ list_ip + [item['address'].split('/')[0]] }}"
+      with_items: "{{ iscsi_interfaces }}"
+
+    - name: "Perform a discovery and show available target nodes"
+      community.general.open_iscsi:
+        show_nodes: true
+        discover: true
+        ip: "{{ item }}"
+      with_items: "{{ list_ip }}"
+      register: discover_devices
+
+    - set_fact:
+        iscsi_target: "{{ discover_devices['results'][0]['nodes'][0] }}"
+
+    - name: Connect to the named target
+      community.general.open_iscsi:
+        login: true
+        target: "{{ iscsi_target }}"
+
+    - name: Create a primary partition
+      community.general.parted:
+        device: "/dev/mapper/{{item.key}}"
+        number: 1
+        state: present
+      with_dict: "{{ devices_list }}"
+
+    - name: Create/check ext4 partition
+      community.general.filesystem:
+        fstype: ext4
+        dev: "/dev/mapper/{{item.key}}-part1"
+      with_dict: "{{ devices_list }}"
+
+    - name: Creates directory for mountpoints
+      file:
+        path: "{{item.value}}"
+        state: directory
+      with_dict: "{{ devices_list }}"
+
+    - name: Mount volumes
+      ansible.posix.mount:
+        path: "{{item.value}}"
+        src: "/dev/mapper/{{item.key}}-part1"
+        fstype: ext4
+        state: mounted
+      with_dict: "{{ devices_list }}"
+
+    - name: Install fio
+      ansible.builtin.package:
+        name: fio
+        state: present
+
+    - name: Copy initiator_random_write.fio
+      ansible.builtin.copy:
+        src: "./files/initiator_random_write.fio"
+        dest: "/tmp/initiator_random_write.fio"
+
+    - name: Run FIO process
+      command: "chdir={{item.mount_path}} fio /tmp/initiator_random_write.fio"
+      with_items: "{{ hostvars['localhost']['volumes'] }}"
+      register: ps
+      
+    - name: FIO Results
+      debug: var=ps.stdout_lines
