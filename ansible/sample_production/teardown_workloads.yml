@@ -1,0 +1,99 @@
+---
+- hosts: Initiators_Hosts
+
+  become: true
+  tasks: 
+
+    - name: Obtain IQN from Initiators_Hosts
+      shell: cat /etc/iscsi/initiatorname.iscsi | grep "^InitiatorName=iqn" | awk -F'=' '{print $2}'
+      register: iqn
+
+    - name: IQN Results
+      debug:
+        msg: "host: {{ansible_hostname}} - iqn: {{iqn.stdout}}"
+   
+- hosts: localhost
+
+  tasks:
+    - include_vars: group_vars/workloads.yml
+    
+    - set_fact:
+        iqn_data: []
+        map_volumes: []
+
+    - name: Check private key exists
+      stat:
+        path: "{{ priv_key_file }}"
+      register: result
+
+    - name: End run if missing private key
+      meta: end_play
+      when: (result.stat.isreg is undefined) or (not result.stat.isreg)
+
+    - name: Create IQN/Hostname dictionary
+      set_fact: 
+        iqn_data: "{{ iqn_data|default({}) + [ {'hostname':item, 'iqn':(hostvars[item]['iqn'].stdout)} ] }}"
+      with_items:
+        - "{{ groups['Initiators_Hosts'] }}"
+
+    - name: Remove HAP from volume(s)
+      purestorage.fusion.fusion_volume:
+        app_id: "{{ api_client }}"
+        key_file: "{{ priv_key_file }}"
+        name: "{{ item.name }}"
+        display_name: "{{ item.display_name }}"
+        size: "{{ item.size }}"
+        storage_class: "{{ item.storage_class }}"
+        tenant: "{{ item.tenant }}"
+        tenant_space: "{{ item.tenant_space }}"
+        placement_group: "{{ item.placement_group }}"
+        hosts: []
+        state: "present"
+      with_items: "{{ volumes }}"
+   
+    - name: Delete Host Access Policy
+      purestorage.fusion.fusion_hap:
+        app_id: "{{ api_client }}"
+        key_file: "{{ priv_key_file }}"
+        state: "absent" # or absent present
+        name: "{{ item.hostname }}"
+        iqn: "{{ item.iqn }}"
+      with_items: "{{iqn_data}}"
+      when: item.iqn != ""
+
+    - name: Delete volume(s)
+      purestorage.fusion.fusion_volume:
+        app_id: "{{ api_client }}"
+        key_file: "{{ priv_key_file }}"
+        name: "{{ item.name }}"
+        display_name: "{{ item.display_name }}"
+        size: "{{ item.size }}"
+        storage_class: "{{ item.storage_class }}"
+        tenant: "{{ item.tenant }}"
+        tenant_space: "{{ item.tenant_space }}"
+        placement_group: "{{ item.placement_group }}"
+        hosts: "{{ item.host_access_policies }}"
+        state: "absent" # or absent
+      with_items: "{{ volumes }}"
+   
+    - name: Delete placement group(s)
+      purestorage.fusion.fusion_pg:
+        app_id: "{{ api_client }}"
+        key_file: "{{ priv_key_file }}"
+        state: "absent" # or absent
+        name: "{{ item.name }}"
+        display_name: "{{ item.display_name }}"
+        tenant: "{{ item.tenant }}"
+        tenant_space: "{{ item.tenant_space }}"
+        availability_zone: "{{ item.availability_zone }}"
+        region: "{{ item.region }}"
+      with_items: "{{ placement_groups }}"
+
+    - name: Delete tenant space(s)
+      purestorage.fusion.fusion_ts:
+        app_id: "{{ api_client }}"
+        key_file: "{{ priv_key_file }}"
+        state: "absent" # or absent
+        name: "{{ item.name }}"
+      with_items: "{{ tenant_space }}"
+ 
