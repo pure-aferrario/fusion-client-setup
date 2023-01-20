@@ -1,0 +1,47 @@
+---
+- hosts: localhost
+
+  tasks:
+  - include_vars: group_vars/consumer.yml
+  - set_fact:
+      tenants_dict: {}
+
+  - name: Get tenants
+    purestorage.fusion.fusion_info:
+      app_id: "{{ api_client }}"
+      key_file: "{{ priv_key_file }}"
+      gather_subset: tenants
+    register: fusion_info
+  - debug: msg="{{ fusion_info['fusion_info'] }}"
+  
+  - name: Get tenant_spaces
+    purestorage.fusion.fusion_info:
+      app_id: "{{ api_client }}"
+      key_file: "{{ priv_key_file }}"
+      gather_subset: tenant_spaces
+    register: fusion_info
+  - debug: msg="{{ fusion_info['fusion_info'] }}"
+
+  - name: Collect api_clients from Pure Storage
+    purestorage.fusion.fusion_info:
+      gather_subset: api_clients
+      app_id: "{{ ansible_env.API_CLIENT }}"
+      key_file: "{{ ansible_env.PRIV_KEY_FILE }}"
+    register: fusion_info
+  - debug: msg="{{ fusion_info['fusion_info'] }}"
+
+  - name: Collect Roles from Pure Storage
+    purestorage.fusion.fusion_info:
+      gather_subset: roles
+      app_id: "{{ ansible_env.API_CLIENT }}"
+      key_file: "{{ ansible_env.PRIV_KEY_FILE }}"
+    register: fusion_info
+  - debug: msg="{{ fusion_info['fusion_info'] }}"
+
+  - name: Collect Users from Pure Storage
+    purestorage.fusion.fusion_info:
+      gather_subset: users
+      app_id: "{{ ansible_env.API_CLIENT }}"
+      key_file: "{{ ansible_env.PRIV_KEY_FILE }}"
+    register: fusion_info
+  - debug: msg="{{ fusion_info['fusion_info'] }}"
