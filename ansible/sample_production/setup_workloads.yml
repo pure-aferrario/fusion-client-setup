@@ -171,7 +171,7 @@
 
     - name: Create a primary partition
       community.general.parted:
-        device: "/dev/mapper/{{item.key}}"
+        device: "/dev/mapper/{{item.value}}"
         number: 1
         state: present
       with_dict: "{{ devices_list }}"
@@ -179,19 +179,19 @@
     - name: Create/check ext4 partition
       community.general.filesystem:
         fstype: ext4
-        dev: "/dev/mapper/{{item.key}}-part1"
+        dev: "/dev/mapper/{{item.value}}-part1"
       with_dict: "{{ devices_list }}"
 
     - name: Creates directory for mountpoints
       file:
-        path: "{{item.value}}"
+        path: "{{item.key}}"
         state: directory
       with_dict: "{{ devices_list }}"
 
     - name: Mount volumes
       ansible.posix.mount:
-        path: "{{item.value}}"
-        src: "/dev/mapper/{{item.key}}-part1"
+        path: "{{item.key}}"
+        src: "/dev/mapper/{{item.value}}-part1"
         fstype: ext4
         state: mounted
       with_dict: "{{ devices_list }}"
