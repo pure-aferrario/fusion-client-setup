@@ -5,6 +5,7 @@ regions:
 availability_zones:
   - name: az1
     display_name: az1
+    region: region1
 
 network_interface_groups:
   - name: interface_group1
@@ -24,6 +25,7 @@ storage_endpoints:
     gateway: 172.17.1.1
     network_interface_groups: ["interface_group1"]
     availability_zone: az1
+    region: "region1"
 
 arrays:
   - name: flasharray1

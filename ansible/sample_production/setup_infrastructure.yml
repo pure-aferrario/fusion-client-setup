@@ -28,6 +28,7 @@
       state: present # or absent
       name: "{{ item.name }}"
       display_name: "{{ item.display_name }}"
+      region: "{{ item.region }}"
     loop: "{{ availability_zones }}"
 
   - name: Create new network interface group(s)
@@ -53,10 +54,10 @@
       name: "{{ item.name }}"
       display_name: "{{ item.display_name }}"
       availability_zone: "{{ item.availability_zone }}"
-      mtu: "{{ item.mtu }}"
       gateway: "{{ item.gateway }}"
       addresses: "{{ item.address }}"
-      provider_subnets: "{{ item.network_interface_groups }}"
+      region: "{{ item.region }}"
+      network_interface_groups: "{{ item.network_interface_groups }}"
     loop: "{{ storage_endpoints }}"
 
   - name: Create new array(s)
