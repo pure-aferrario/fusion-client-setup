@@ -36,11 +36,12 @@
       key_file: "{{ ansible_env.PRIV_KEY_FILE}}"
       state: present # or absent
       name: default
+      display_name: default
       availability_zone: az1
-      mtu: 150
       gateway: 172.17.1.1
       addresses: ["172.17.1.2/24", "172.17.1.1/24"]
-      provider_subnets: interface_group1
+      network_interface_groups: ["interface_group1"]
+      endpoint_type: iscsi
 
   - name: Register new array
     purestorage.fusion.fusion_array:
