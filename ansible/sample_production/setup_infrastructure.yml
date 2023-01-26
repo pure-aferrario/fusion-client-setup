@@ -51,6 +51,7 @@
       key_file: "{{ priv_key_file }}"
       state: present # or absent
       name: "{{ item.name }}"
+      display_name: "{{ item.display_name }}"
       availability_zone: "{{ item.availability_zone }}"
       gateway: "{{ item.gateway }}"
       addresses: "{{ item.address }}"
