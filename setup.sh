@@ -80,7 +80,6 @@ else
   sudo wget -q --show-progress -O /usr/bin/hmctl https://github.com/PureStorage-OpenConnect/hmctl/releases/latest/download/hmctl-linux-amd64
 fi
 
-
 # check last command exit status
 if [ $? -eq 0 ]; then
   echo -e "${green}HMCTL download to: /usr/bin/hmctl"
@@ -107,7 +106,6 @@ echo '{
   }
 }' > ~/.pure/fusion.json
 
-
 # HMCTL test
 hmctl region list
 
@@ -128,6 +126,8 @@ echo -e "${blue}################################"
 echo -e "#    Python Lib: Purefusion    #"
 echo -e "################################${nocolor}"
 pip3 install purefusion
+pip3 install netaddr
+pip3 install cryptography==3.4.8
 
 # Python smoke test
 echo -e "${blue}################################"
@@ -143,20 +143,21 @@ if [ $? -eq 1 ]; then
   echo -e "################################${nocolor}"
 fi
 
-
 # Ansible setup
 echo -e "${blue}################################"
 echo -e "#         Ansible setup        #"
 echo -e "################################${nocolor}"
 pip3 install ansible
 ansible-galaxy collection install purestorage.fusion
-
+ansible-galaxy collection install community.general
+ansible-galaxy collection install ansible.posix
 
 # Ansible test
 echo -e "${blue}################################"
 echo -e "#     Ansible smoke test     #"
 echo -e "################################${nocolor}"
 ansible-playbook ansible/smoke_test.yml
+
 # check if last command fail
 if [ $? -eq 0 ]; then
     # if success
@@ -197,7 +198,6 @@ fi
 echo -e "${blue}################################"
 echo -e "#       Terraform test        #"
 echo -e "################################${nocolor}"
-
 
 color_terraform="$red"
 terraform_version=$(terraform -version)
