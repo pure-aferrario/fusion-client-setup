@@ -152,6 +152,10 @@ ansible-galaxy collection install purestorage.fusion
 ansible-galaxy collection install community.general
 ansible-galaxy collection install ansible.posix
 
+# This is just a hack until these changes are merged into the mainline Ansible collection
+cp patches/fusion_region.py "$HOME/.ansible/collections/ansible_collections/purestorage/fusion/plugins/modules/"
+cp patches/fusion_se.py "$HOME/.ansible/collections/ansible_collections/purestorage/fusion/plugins/modules/"
+
 # Ansible test
 echo -e "${blue}################################"
 echo -e "#     Ansible smoke test     #"

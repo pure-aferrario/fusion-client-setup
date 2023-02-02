@@ -14,26 +14,64 @@ If you need a high level overview of Pure Fusion please check out [this Youtube 
     - Testing and scripting for this project done in a Ubuntu 20.04 vm
     - Pull requests for direct Windows and MacOS support welcome
 ## Setting up Tools
-The objective of this guide is to help you setup the tools you can use to interact with your Fusion environment. To that end, you should start by making the setup script executable and running it.
+The objective of this guide is to help you setup the tools you can use to interact with your Fusion environment.
+
+There are 2 main ways to get access to the tools:
+- Downloading and using the pre-packaged Docker image
+- Running the installer to install the tools natively
+
+### Using pre-packaged Docker image
 ```
+wget https://github.com/pure-aferrario/fusion-client-setup/releases/latest/download/fusion-devkit.tar
+docker load < fusion-devkit.tar
+mkdir api-client
+echo API_CLIENT_ID > api-client/issuer
+cp PATH_TO_PRIV_KEY api-client/
+docker run -it -v `pwd`/api-client:/api-client fusion-devkit bash
+```
+
+### Using the installer
+```
+git clone https://github.com/pure-aferrario/fusion-client-setup.git
+cd fusion-client-setup
 sudo chmod +x setup.sh
 ./setup.sh API_CLIENT_ID /absolute/PATH_TO_PRIV_KEY
 ```
-Running this script will set up the following.
+
+## Tools available
+Here are the tools provided in this devkit
+
 ### HMCTL
-HMCTL is the remote CLI utility provided with Fusion. The setup.sh script will install this and configure your profile so that you will be able to interact with your Fusion environment using the API client you provide. It will also run a smoke test to make sure HMCTL is working.
+HMCTL is the remote CLI utility provided with Fusion.
+
+To check if HMCTL was configured correctly, run
+```
+hmctl version
+```
 
 After this install you should be able to run commands as seen in [this guide](https://support.purestorage.com/Pure_Fusion/Pure_Fusion_for_Storage_Consumers/Example_CLI_Commands).
+
 ### Python
-Our Python library has full support for all Fusion APIs. The setup.sh script will install the needed dependencies and run a smoke test to make sure it works.
+Our Python library has full support for all Fusion APIs.
+
+To run the smoke test
+```
+python3 python/00_smoke_test.py
+```
 
 After installation is complete you can refer to [the documentation](https://github.com/PureStorage-OpenConnect/fusion-python-sdk) for guidance on writing your own Python scripts.
+
 ### Ansible
-Our Ansible collection has full support for all Fusion APIs. The setup.sh script will install Ansible and needed dependencies and run a smoke test to make sure it's working.
+Our Ansible collection has full support for all Fusion APIs.
+
+To run the smoke test
+```
+ansible-playbook smoke_test.yml
+```
 
 After installation you can check out the ansible collection from the [Ansible documentation page here](https://docs.ansible.com/ansible/latest/collections/purestorage/fusion/index.html#plugins-in-purestorage-fusion) for more information on the individual modules.
 
 ### Terraform
-Our Terraform provider supports consumer workflows in Fusion. The setup.sh script will install Terraform and needed dependencies and verify that it is ready. Terraform won't do a full smoke test because it is a consumer-focused provider and requires more Fusion configuration before it can execute.
+Our Terraform provider supports consumer workflows in Fusion. Terraform won't do a full smoke test because it is a consumer-focused provider and requires more Fusion configuration before it can execute.
 
 After installation you can see the [Terraform module documentation here](https://registry.terraform.io/providers/PureStorage-OpenConnect/fusion/1.0.0) for guidance on writing your own Terraform templates.
