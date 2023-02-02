@@ -1,28 +1,26 @@
 FROM ubuntu:jammy
 
+# Install required tools
 RUN apt update
-RUN DEBIAN_FRONTEND=noninteractive apt install -y python3-pip ansible wget git
-RUN pip3 install purefusion
+RUN DEBIAN_FRONTEND=noninteractive apt install -y python3-pip ansible wget git bash-completion vim
 
-RUN mkdir /workdir
-WORKDIR /workdir
+# Install Python SDK and Ansible
+RUN pip3 install --upgrade pip && pip3 install purefusion cryptography==3.4.8 ansible netaddr
 
-RUN wget -q --show-progress -O /usr/bin/hmctl https://github.com/PureStorage-OpenConnect/hmctl/releases/latest/download/hmctl-linux-amd64
-CMD chmod +x /usr/bin/hmctl
-
+# Install ansible's fusion collection
 RUN ansible-galaxy collection install purestorage.fusion
 
-RUN mkdir -p /root/.pure
-ENV PRIV_KEY_FILE=/workdir/private_key.pem
-RUN echo  "{ \"default_profile\": \"main\",\n" \
-          " \"profiles\": {\n" \
-          "   \"main\": {\n" \
-          "     \"env\": \"pure1\",\n" \
-          "     \"endpoint\": \"https://api.pure1.purestorage.com/fusion\",\n" \
-          "     \"auth\": {\n" \
-          "       \"issuer_id\": \"API_CLIENT\",\n" \
-          "       \"private_pem_file\": \"/workdir/private_key.pem\"\n" \
-          "     }\n" \
-          "   }\n" \
-          " }\n" \
-          "}" > /root/.pure/fusion.json
+# Get ansible playbooks and python scripts
+COPY ansible ./ansible
+COPY python ./python
+
+# This is just a hack until these changes are merged into the mainline Ansible collection
+COPY patches/fusion_region.py /root/.ansible/collections/ansible_collections/purestorage/fusion/plugins/modules/
+COPY patches/fusion_se.py /root/.ansible/collections/ansible_collections/purestorage/fusion/plugins/modules/
+
+# Install hmctl
+RUN wget -q -O /usr/bin/hmctl https://github.com/PureStorage-OpenConnect/hmctl/releases/latest/download/hmctl-linux-amd64
+RUN chmod +x /usr/bin/hmctl
+
+COPY addon.sh ./addon.sh
+RUN cat ./addon.sh >> /root/.bashrc 
