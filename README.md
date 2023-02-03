@@ -9,10 +9,14 @@ If you need a high level overview of Pure Fusion please check out [this Youtube 
 - 1+ Arrays configured with Fusion Agents installed
 - An API Client (Application) registered with Pure1 and its associated private key. This API key will need Pure1 Admin permissions.
     - [API Client Creation Guide](https://support.purestorage.com/Pure_Fusion/Getting_Started_with_Pure_Fusion/Creating_and_API_Client%2F%2FApplication_Access_for_Fusion_or_Pure1_API_access)
-- An x86-64 Ubuntu linux machine as your control server
-    - Windows WSL2 with Ubuntu 20.04 is tested working and is actually the author's setup
-    - Testing and scripting for this project done in a Ubuntu 20.04 vm
-    - Pull requests for direct Windows and MacOS support welcome
+- Operating Systems for the control server
+    - An x86-64 Ubuntu linux machine
+        - Windows WSL2 Ubuntu 20.04 or Preview with Docker Desktop installed and enabled are tested working
+        - Testing and scripting for this project done in a Ubuntu 20.04 vm
+    - An Apple M1 (arm64) or Intel (amd64) machine
+        - Docker Desktop required
+        - wget required 
+    - Pull requests for direct Windows support welcome
 ## Setting up Tools
 The objective of this guide is to help you setup the tools you can use to interact with your Fusion environment.
 
