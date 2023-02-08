@@ -7,6 +7,10 @@ from os import getenv
 def smoke_test():
     # Configure OAuth2 access token for authorization
     configuration = fusion.Configuration()
+    if getenv('HOST_ENDPOINT'):
+        configuration.host = getenv('HOST_ENDPOINT')
+    if getenv('TOKEN_ENDPOINT'):
+        configuration.token_endpoint = getenv('TOKEN_ENDPOINT')
     configuration.issuer_id = getenv('API_CLIENT')
     configuration.private_key_file = getenv('PRIV_KEY_FILE')
 

@@ -8,6 +8,10 @@ def teardown_workloads():
     print("Tearing down workloads")
     # Setup Config
     config = fusion.Configuration()
+    if os.getenv('HOST_ENDPOINT'):
+        config.host = os.getenv('HOST_ENDPOINT')
+    if os.getenv('TOKEN_ENDPOINT'):
+        config.token_endpoint = os.getenv('TOKEN_ENDPOINT')
     config.issuer_id = os.getenv("API_CLIENT")
     config.private_key_file = os.getenv("PRIV_KEY_FILE")
 
