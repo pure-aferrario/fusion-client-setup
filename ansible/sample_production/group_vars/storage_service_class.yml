@@ -10,8 +10,8 @@ storage_class:
   - name: sc_name
     display_name: sc_name
     storage_service: ss_name
-    size_limit: 1T #100M 100G 100T 100P Default 4PB
-    iops_limit: 10000 #between 100 and 100000000
+    size_limit: 1T # 100M 100G 100T 100P Default 4PB
+    iops_limit: 10000 # between 100 and 100000000
     bw_limit: 4194M
 # - name: sc_name_1
 #   display_name: sc_name_1

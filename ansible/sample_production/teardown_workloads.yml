@@ -2,18 +2,18 @@
 - hosts: localhost
 
   tasks:
-    - include_vars: group_vars/workloads.yml
-    
-    - set_fact:
-        map_volumes: {}
+    - ansible.builtin.include_vars: group_vars/workloads.yml
+
+    - ansible.builtin.set_fact:
+        map_volumes: { }
 
     - name: Check private key exists
-      stat:
+      ansible.builtin.stat:
         path: "{{ priv_key_file }}"
       register: result
 
     - name: End run if missing private key
-      meta: end_play
+      ansible.builtin.meta: end_play
       when: (result.stat.isreg is undefined) or (not result.stat.isreg)
 
     - name: Get Volumes info
@@ -24,11 +24,11 @@
       register: fusion_info
 
     - name: Map Volumes with (Serial ID and IQN )
-      set_fact:
+      ansible.builtin.set_fact:
         map_volumes: >-
-              {{ map_volumes|combine(
-              { item.value.name.lower() : { 'serial':(prefix_disk + item.value.serial_number).lower(), 'iqn':(item.value.target.iscsi.iqn).lower()} }
-              ) }}
+          {{ map_volumes|combine(
+          { item.value.name.lower() : { 'serial':(prefix_disk + item.value.serial_number).lower(), 'iqn':(item.value.target.iscsi.iqn).lower()} }
+          ) }}
       with_dict: "{{ fusion_info['fusion_info']['volumes'] }}"
 
     - name: Get Purestorage Storage Endpoints
@@ -40,30 +40,30 @@
 
 - hosts: Initiators_Hosts
   become: true
-  tasks: 
-    - set_fact:
-        valid_volumes: {}
-        devices: {}
+  tasks:
+    - ansible.builtin.set_fact:
+        valid_volumes: { }
+        devices: { }
         list_ip: []
         iqn_list: []
-        unmount_report: {}
+        unmount_report: { }
         failed_unmount: []
         reg_fusion_info: "{{ hostvars['localhost']['reg_fusion_info'] }}"
 
     - name: Obtain list of volumes to umount
-      set_fact:
+      ansible.builtin.set_fact:
         valid_volumes: "{{ valid_volumes|combine( {item.name: item.mount_path} ) }}"
-      with_items: "{{ hostvars['localhost']['volumes'] }}" 
+      with_items: "{{ hostvars['localhost']['volumes'] }}"
       when: inventory_hostname in item.host_access_policies
 
     - name: Parse volume, mount path and volume id
-      set_fact:
+      ansible.builtin.set_fact:
         devices: "{{ devices|combine( { valid_volumes[item.key]:item.value } ) }}"
       with_dict: "{{ hostvars['localhost']['map_volumes'] }}"
       when: item.key in valid_volumes.keys()
 
     - name: Volumes to unmount
-      debug:
+      ansible.builtin.debug:
         msg:
           - "Unmount: /dev/mapper/{{ item.value.serial }}-part1"
           - "From: {{ item.key }}"
@@ -71,22 +71,22 @@
 
     - name: Umount volumes
       ansible.posix.mount:
-        path: "{{item.key}}"
+        path: "{{ item.key }}"
         state: unmounted
       register: unmount_report
       with_dict: "{{ devices }}"
-      ignore_errors: True
+      ignore_errors: true
 
-    - name: Obtain a list of volumes that fail to unmount 
-      set_fact:
+    - name: Obtain a list of volumes that fail to unmount
+      ansible.builtin.set_fact:
         failed_unmount: "{{ failed_unmount + [ item.item.key] }}"
       when: item.failed
       with_items: "{{ unmount_report.results }}"
-      delegate_facts: True
+      delegate_facts: true
       delegate_to: localhost
 
     - name: Get a list of IQN with unique elements
-      set_fact:
+      ansible.builtin.set_fact:
         iqn_list: "{{ iqn_list + [ item.value.iqn ] }}"
       with_dict: "{{ devices }}"
       when: item.value.iqn not in iqn_list
@@ -94,23 +94,23 @@
     - name: Disconect to the named target
       community.general.open_iscsi:
         login: false
-        target: "{{item}}"
+        target: "{{ item }}"
       loop: "{{ iqn_list }}"
 
     - name: Obtain IQN from Initiators_Hosts
-      shell: cat /etc/iscsi/initiatorname.iscsi | grep "^InitiatorName=iqn" | awk -F'=' '{print $2}'
+      ansible.builtin.shell: cat /etc/iscsi/initiatorname.iscsi | grep "^InitiatorName=iqn" | awk -F'=' '{print $2}'
       register: iqn
 
     - name: IQN Results
-      debug:
-        msg: "host: {{ansible_hostname}} - iqn: {{iqn.stdout}}"
+      ansible.builtin.debug:
+        msg: "host: {{ ansible_hostname }} - iqn: {{ iqn.stdout }}"
 
 - hosts: localhost
 
   tasks:
-    - include_vars: group_vars/workloads.yml
-    
-    - set_fact:
+    - ansible.builtin.include_vars: group_vars/workloads.yml
+
+    - ansible.builtin.set_fact:
         iqn_data: []
         map_volumes: []
         HAP_undeletable: []
@@ -118,31 +118,31 @@
         TS_undeletable: []
 
     - name: Create IQN/Hostname dictionary
-      set_fact: 
+      ansible.builtin.set_fact:
         iqn_data: "{{ iqn_data|default({}) + [ {'hostname':item, 'iqn':(hostvars[item]['iqn'].stdout)} ] }}"
       with_items:
         - "{{ groups['Initiators_Hosts'] }}"
 
     - name: Create failed_unmount var
-      set_fact:
+      ansible.builtin.set_fact:
         failed_unmount: []
       when: failed_unmount|default('') == ''
 
     - name: Obtain a list of HAP/PG to keep
-      set_fact:
-        HAP_undeletable: "{{HAP_undeletable + item.host_access_policies }}"
-        PG_undeletable: "{{PG_undeletable + [item.placement_group] }}"
-        TS_undeletable: "{{TS_undeletable + [item.tenant_space] }}"
+      ansible.builtin.set_fact:
+        HAP_undeletable: "{{ HAP_undeletable + item.host_access_policies }}"
+        PG_undeletable: "{{ PG_undeletable + [item.placement_group] }}"
+        TS_undeletable: "{{ TS_undeletable + [item.tenant_space] }}"
       with_items: "{{ volumes }}"
       when: item.mount_path in failed_unmount
 
     - name: Volumes safe to remove
-      debug:
+      ansible.builtin.debug:
         msg:
-          - "Name: {{item.name}}"
-          - "Path:{{item.mount_path}}"
+          - "Name: {{ item.name }}"
+          - "Path:{{ item.mount_path }}"
       with_items: "{{ volumes }}"
-      when: 
+      when:
         - item.mount_path not in failed_unmount
         - item.placement_group not in PG_undeletable
         - item.tenant_space not in TS_undeletable
@@ -158,7 +158,7 @@
         tenant: "{{ item.tenant }}"
         tenant_space: "{{ item.tenant_space }}"
         placement_group: "{{ item.placement_group }}"
-        hosts: []
+        host_access_policies: []
         state: "present"
       with_items: "{{ volumes }}"
       when: item.mount_path not in failed_unmount
@@ -174,7 +174,7 @@
         tenant: "{{ item.tenant }}"
         tenant_space: "{{ item.tenant_space }}"
         placement_group: "{{ item.placement_group }}"
-        hosts: "{{ item.host_access_policies }}"
+        host_access_policies: "{{ item.host_access_policies }}"
         state: "absent"
       with_items: "{{ volumes }}"
       when: item.mount_path not in failed_unmount
@@ -186,7 +186,7 @@
         state: "absent"
         name: "{{ item.hostname }}"
         iqn: "{{ item.iqn }}"
-      with_items: "{{iqn_data}}"
+      with_items: "{{ iqn_data }}"
       when: item.hostname not in HAP_undeletable
 
     - name: Delete placement group(s)
@@ -209,5 +209,6 @@
         key_file: "{{ priv_key_file }}"
         state: "absent"
         name: "{{ item.name }}"
+        tenant: "{{ item.tenant }}"
       with_items: "{{ tenant_space }}"
       when: item.name not in TS_undeletable

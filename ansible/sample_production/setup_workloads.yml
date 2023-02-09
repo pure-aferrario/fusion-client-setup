@@ -2,39 +2,39 @@
 - hosts: Initiators_Hosts
 
   become: true
-  tasks: 
+  tasks:
 
     - name: Obtain IQN from Initiators_Hosts
-      shell: cat /etc/iscsi/initiatorname.iscsi | grep "^InitiatorName=iqn" | awk -F'=' '{print $2}'
+      ansible.builtin.shell: cat /etc/iscsi/initiatorname.iscsi | grep "^InitiatorName=iqn" | awk -F'=' '{print $2}'
       register: iqn
 
     - name: IQN Results
-      debug:
-        msg: 
-        - "Inventory Hostname: {{inventory_hostname}}"
-        - "Hostname: {{ansible_hostname}}"
-        - "IQN: {{iqn.stdout}}"
-   
+      ansible.builtin.debug:
+        msg:
+          - "Inventory Hostname: {{ inventory_hostname }}"
+          - "Hostname: {{ ansible_hostname }}"
+          - "IQN: {{ iqn.stdout }}"
+
 - hosts: localhost
 
   tasks:
-    - include_vars: group_vars/workloads.yml
-    
-    - set_fact:
+    - ansible.builtin.include_vars: group_vars/workloads.yml
+
+    - ansible.builtin.set_fact:
         iqn_data: []
-        map_volumes: {}
+        map_volumes: { }
 
     - name: Check private key exists
-      stat:
+      ansible.builtin.stat:
         path: "{{ priv_key_file }}"
       register: result
 
     - name: End run if missing private key
-      meta: end_play
+      ansible.builtin.meta: end_play
       when: (result.stat.isreg is undefined) or (not result.stat.isreg)
 
     - name: Create IQN/Hostname dictionary
-      set_fact: 
+      ansible.builtin.set_fact:
         iqn_data: "{{ iqn_data|default({}) + [ {'hostname':item, 'iqn':(hostvars[item]['iqn'].stdout)} ] }}"
       with_items:
         - "{{ groups['Initiators_Hosts'] }}"
@@ -48,7 +48,7 @@
         display_name: "{{ item.hostname }}"
         personality: "linux"
         iqn: "{{ item.iqn }}"
-      with_items: "{{iqn_data}}"
+      with_items: "{{ iqn_data }}"
       when: item.iqn != ""
 
     - name: Create new tenant space(s)
@@ -71,6 +71,7 @@
         tenant: "{{ item.tenant }}"
         tenant_space: "{{ item.tenant_space }}"
         availability_zone: "{{ item.availability_zone }}"
+        storage_service: "{{ item.storage_service }}"
         region: "{{ item.region }}"
       loop: "{{ placement_groups }}"
 
@@ -86,9 +87,9 @@
         tenant: "{{ item.tenant }}"
         tenant_space: "{{ item.tenant_space }}"
         placement_group: "{{ item.placement_group }}"
-        hosts: "{{ item.host_access_policies }}"
+        host_access_policies: "{{ item.host_access_policies }}"
       loop: "{{ volumes }}"
-    
+
     - name: Get Volumes info
       purestorage.fusion.fusion_info:
         app_id: "{{ api_client }}"
@@ -97,11 +98,11 @@
       register: fusion_info
 
     - name: Map Volumes with (Serial ID and IQN )
-      set_fact:
+      ansible.builtin.set_fact:
         map_volumes: >-
-              {{ map_volumes|combine(
-              { item.value.name.lower() : { 'serial':(prefix_disk + item.value.serial_number).lower(), 'iqn':(item.value.target.iscsi.iqn).lower()} }
-              ) }}
+          {{ map_volumes|combine(
+          { item.value.name.lower() : { 'serial':(prefix_disk + item.value.serial_number).lower(), 'iqn':(item.value.target.iscsi.iqn).lower()} }
+          ) }}
       with_dict: "{{ fusion_info['fusion_info']['volumes'] }}"
 
     - name: Get Purestorage Storage Endpoints
@@ -113,42 +114,42 @@
 
 - hosts: Initiators_Hosts
   become: true
-  tasks: 
-    - set_fact:
-        valid_volumes: {}
-        devices: {}
+  tasks:
+    - ansible.builtin.set_fact:
+        valid_volumes: { }
+        devices: { }
         iscsi_interfaces: []
         list_ip: []
         iqn_list: []
         reg_fusion_info: "{{ hostvars['localhost']['reg_fusion_info'] }}"
 
     - name: Obtain list of volumes to mount
-      set_fact:
+      ansible.builtin.set_fact:
         valid_volumes: "{{ valid_volumes|combine( {item.name: item.mount_path} ) }}"
-      with_items: "{{ hostvars['localhost']['volumes'] }}" 
+      with_items: "{{ hostvars['localhost']['volumes'] }}"
       when: inventory_hostname in item.host_access_policies
 
-    - debug: msg="{{ valid_volumes }}" 
+    - ansible.builtin.debug: msg="{{ valid_volumes }}"
 
     - name: Parse volume, mount path and volume id
-      set_fact:
+      ansible.builtin.set_fact:
         devices: "{{ devices|combine( { valid_volumes[item.key]:item.value } ) }}"
       with_dict: "{{ hostvars['localhost']['map_volumes'] }}"
       when: item.key in valid_volumes.keys()
 
-    - debug:
-       msg:
-        - "Mount: /dev/mapper/{{ item.value.serial }}"
-        - "On: {{ item.key }}"
+    - ansible.builtin.debug:
+        msg:
+          - "Mount: /dev/mapper/{{ item.value.serial }}"
+          - "On: {{ item.key }}"
       with_dict: "{{ devices }}"
 
     - name: Get a list of iscsi_interfaces
-      set_fact:
+      ansible.builtin.set_fact:
         iscsi_interfaces: "{{ iscsi_interfaces + [reg_fusion_info['fusion_info']['storage_endpoints'][item]['iscsi_interfaces']] }}"
       with_items: "{{ reg_fusion_info['fusion_info']['storage_endpoints'].keys() }}"
 
     - name: Extract IP from iscsi_interfaces
-      set_fact:
+      ansible.builtin.set_fact:
         list_ip: "{{ list_ip + [item['address'].split('/')[0]] }}"
       with_items: "{{ iscsi_interfaces }}"
 
@@ -160,7 +161,7 @@
       with_items: "{{ list_ip }}"
 
     - name: Get a list of IQN with unique elements
-      set_fact:
+      ansible.builtin.set_fact:
         iqn_list: "{{ iqn_list + [ item.value.iqn ] }}"
       with_dict: "{{ devices }}"
       when: item.value.iqn not in iqn_list
@@ -168,7 +169,7 @@
     - name: Connect to the named target
       community.general.open_iscsi:
         login: true
-        target: "{{item}}"
+        target: "{{ item }}"
       loop: "{{ iqn_list }}"
 
     - name: Create a primary partition
@@ -181,19 +182,19 @@
     - name: Create/check ext4 partition
       community.general.filesystem:
         fstype: ext4
-        dev: "/dev/mapper/{{item.value.serial}}-part1"
+        dev: "/dev/mapper/{{ item.value.serial }}-part1"
       with_dict: "{{ devices }}"
 
     - name: Creates directory for mountpoints
-      file:
-        path: "{{item.key}}"
+      ansible.builtin.file:
+        path: "{{ item.key }}"
         state: directory
       with_dict: "{{ devices }}"
 
     - name: Mount volumes
       ansible.posix.mount:
-        path: "{{item.key}}"
-        src: "/dev/mapper/{{item.value.serial}}-part1"
+        path: "{{ item.key }}"
+        src: "/dev/mapper/{{ item.value.serial }}-part1"
         fstype: ext4
         state: mounted
       with_dict: "{{ devices }}"
@@ -209,9 +210,9 @@
         dest: "/tmp/initiator_random_write.fio"
 
     - name: Run FIO process
-      command: "chdir={{item.mount_path}} fio /tmp/initiator_random_write.fio"
+      ansible.builtin.command: "chdir={{ item.mount_path }} fio /tmp/initiator_random_write.fio"
       with_items: "{{ hostvars['localhost']['volumes'] }}"
       register: ps
-      
+
     - name: FIO Results
-      debug: var=ps.stdout_lines
+      ansible.builtin.debug: var=ps.stdout_lines

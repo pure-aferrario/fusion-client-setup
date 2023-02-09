@@ -40,7 +40,7 @@ This series of playbooks are mean to run based on the info inside the files on f
 Usually the name in the files are almost identical.
 To detect without error what files is linked to specif playbook, inside the same, there will be a import with the value and path to the file.
 ```
-   - include_vars: group_vars/consumer.yml
+   - ansible.builtin.include_vars: group_vars/consumer.yml
 ```
 
 ### sample_production/inventory.ini

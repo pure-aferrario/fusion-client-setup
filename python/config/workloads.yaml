@@ -4,38 +4,38 @@
   display_name: db_tenant_space
   tenant: oracle_dbas
   placement_groups:
-  - name: pg1
-    display_name: pg1
-    region: region1
-    availability_zone: az1
-    storage_service: flash_performance
+    - name: pg1
+      display_name: pg1
+      region: region1
+      availability_zone: az1
+      storage_service: flash_performance
   volumes:
-  - name: data_vol1
-    display_name: data_vol1
-    size: 5000000000000
-    storage_class: db_high_performance
-    placement_group: pg1
-    host_access_policies: customer_host_access
-  - name: data_vol2
-    display_name: data_vol2
-    size: 5000000000000
-    storage_class: db_high_performance
-    placement_group: pg1
-    host_access_policies: customer_host_access
-  - name: log_vol
-    display_name: log_vol
-    size: 5000000000000
-    storage_class: db_standard
-    placement_group: pg1
-    host_access_policies: customer_host_access
-  - name: config_vol
-    display_name: config_vol
-    size: 500000000000
-    storage_class: db_bulk
-    placement_group: pg1
-    host_access_policies: customer_host_access
+    - name: data_vol1
+      display_name: data_vol1
+      size: 5000000000000
+      storage_class: db_high_performance
+      placement_group: pg1
+      host_access_policies: customer_host_access
+    - name: data_vol2
+      display_name: data_vol2
+      size: 5000000000000
+      storage_class: db_high_performance
+      placement_group: pg1
+      host_access_policies: customer_host_access
+    - name: log_vol
+      display_name: log_vol
+      size: 5000000000000
+      storage_class: db_standard
+      placement_group: pg1
+      host_access_policies: customer_host_access
+    - name: config_vol
+      display_name: config_vol
+      size: 500000000000
+      storage_class: db_bulk
+      placement_group: pg1
+      host_access_policies: customer_host_access
   host_access_policies:
-  - name: customer_host_access
-    display_name: customer_host_access
-    iqn: iqn.1994-05.com.redhat:9dd57693efb
-    personality: linux
+    - name: customer_host_access
+      display_name: customer_host_access
+      iqn: iqn.1994-05.com.redhat:9dd57693efb
+      personality: linux
